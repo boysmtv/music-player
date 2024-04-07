@@ -73,6 +73,7 @@ class InterfaceDialog (val context: Context) {
     }
 
     fun showDialogWarningConfirm(strTitle: String, strContent: String, strBtn: String) {
+        dismisDialogLoading()
         pDialog = SweetAlertDialog(context, SweetAlertDialog.WARNING_TYPE)
         pDialog.titleText = strTitle
         pDialog.contentText = strContent

@@ -4,5 +4,5 @@ import com.example.musicplayer.activity.music.model.MusicResultModel
 import com.example.musicplayer.databinding.ActivitySearchListItemBinding
 
 interface SearchOnClickListener<T> {
-    fun onItemClick(itemBinding: ActivitySearchListItemBinding, position: Int, model: MusicResultModel)
+    fun onItemClick(position: Int, model: MusicResultModel)
 }

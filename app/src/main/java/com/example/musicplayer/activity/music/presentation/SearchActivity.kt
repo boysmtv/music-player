@@ -5,8 +5,6 @@ import android.media.MediaPlayer
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
-import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import androidx.appcompat.app.AppCompatActivity
@@ -14,12 +12,9 @@ import com.example.musicplayer.R
 import com.example.musicplayer.activity.music.adapter.SongAdapter
 import com.example.musicplayer.activity.music.model.MusicReqModel
 import com.example.musicplayer.activity.music.model.MusicResultModel
-import com.example.musicplayer.activity.music.model.SongModel
 import com.example.musicplayer.activity.music.vm.MusicViewModel
 import com.example.musicplayer.databinding.ActivitySearchBinding
-import com.example.musicplayer.databinding.ActivitySearchListItemBinding
 import com.example.musicplayer.helper.InterfaceDialog
-import io.gresse.hugo.vumeterlibrary.VuMeterView
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import timber.log.Timber
 
@@ -27,7 +22,7 @@ class SearchActivity : AppCompatActivity(), SearchOnClickListener<MusicResultMod
 
     private val TAG = this::class.java.simpleName
 
-    val musicVM by viewModel<MusicViewModel>()
+    val viewModel by viewModel<MusicViewModel>()
 
     private lateinit var mediaPlayer: MediaPlayer
 
@@ -42,7 +37,6 @@ class SearchActivity : AppCompatActivity(), SearchOnClickListener<MusicResultMod
     private lateinit var listMusic: List<MusicResultModel>
 
     private var currPosition = 0
-    private lateinit var musicVuMeterView: VuMeterView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,8 +54,8 @@ class SearchActivity : AppCompatActivity(), SearchOnClickListener<MusicResultMod
         binding.etSearchName.setText("justin beiber")
         binding.rvSearch.requestFocus()
 
-        setupViewModel(musicVM, binding, songAdapter)
-        setRequest(musicVM, binding, songAdapter)
+        setupViewModel(viewModel, binding, songAdapter)
+        setRequest(viewModel, binding, songAdapter)
 
         setOnListener()
     }
@@ -86,11 +80,10 @@ class SearchActivity : AppCompatActivity(), SearchOnClickListener<MusicResultMod
                     }
 
                     listMusic = it
-                    adapter.provided(it, musicResultModel, thisContext, interfaceDialog)
+                    adapter.provided(it, musicResultModel, thisContext)
                 }
             }
             onError.observe(thisContext) {
-                interfaceDialog.dismisDialogLoading()
                 interfaceDialog.showDialogWarningConfirm("Please try again!", it, "OK!")
             }
 
@@ -101,13 +94,13 @@ class SearchActivity : AppCompatActivity(), SearchOnClickListener<MusicResultMod
     }
 
     private fun setRequest(
-        VM: MusicViewModel,
+        viewModel: MusicViewModel,
         binding: ActivitySearchBinding,
         adapter: SongAdapter
     ) {
         // set loading on ui
         binding.rvSearch.adapter = adapter
-        VM.doIt(MusicReqModel(term = binding.etSearchName.text.toString()))
+        viewModel.doIt(MusicReqModel(term = binding.etSearchName.text.toString()))
     }
 
     private fun setOnListener() = with(binding) {
@@ -129,7 +122,7 @@ class SearchActivity : AppCompatActivity(), SearchOnClickListener<MusicResultMod
                 if (rvSearch.findViewHolderForAdapterPosition(0) != null) {
                     rvSearch.findViewHolderForAdapterPosition(currPosition + 1)!!.itemView.performClick()
                 }
-            }, 0)
+            }, 100)
         }
 
         ivMusicPrevious.setOnClickListener {
@@ -138,16 +131,16 @@ class SearchActivity : AppCompatActivity(), SearchOnClickListener<MusicResultMod
                     if (currPosition > 0)
                         rvSearch.findViewHolderForAdapterPosition(currPosition - 1)!!.itemView.performClick()
                 }
-            }, 0)
+            }, 100)
         }
 
         ivSearch.setOnClickListener {
-            setRequest(musicVM, binding, songAdapter)
+            setRequest(viewModel, binding, songAdapter)
         }
 
         ivCancel.setOnClickListener {
             etSearchName.setText("")
-            setRequest(musicVM, binding, songAdapter)
+            setRequest(viewModel, binding, songAdapter)
         }
 
         etSearchName.addTextChangedListener(object : TextWatcher {
@@ -155,7 +148,7 @@ class SearchActivity : AppCompatActivity(), SearchOnClickListener<MusicResultMod
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
                 if (s.isNotEmpty()) {
-                    setRequest(musicVM, binding, songAdapter)
+                    setRequest(viewModel, binding, songAdapter)
                 }
             }
         })
@@ -163,43 +156,57 @@ class SearchActivity : AppCompatActivity(), SearchOnClickListener<MusicResultMod
 
     @SuppressLint("NotifyDataSetChanged")
     override fun onItemClick(
-        itemBinding: ActivitySearchListItemBinding,
         position: Int,
         model: MusicResultModel
     ) {
-        musicVuMeterView = itemBinding.vmMusic
-        musicResultModel = model
-        currPosition = position
-        binding.tvPlaySong.text = model.trackName
-        songAdapter.provided(listMusic, musicResultModel, thisContext, interfaceDialog)
-        songAdapter.notifyDataSetChanged()
-
-        if (musicResultModel.isPlay) {
-            musicVuMeterView.visibility = GONE
-            musicResultModel.isPlay = false
-            mediaPlayer.stop()
+        if (currPosition == position) {
+            playMusic()
         } else {
-            if (mediaPlayer.isPlaying) {
-                mediaPlayer.stop()
-            }
-            mediaPlayer = MediaPlayer()
-            try {
-                mediaPlayer.setDataSource(model.previewUrl)
-                mediaPlayer.prepare()
-                mediaPlayer.start()
+            musicResultModel = model
+            currPosition = position
+            binding.tvPlaySong.text = model.trackName
+            stopMusic()
+            playMusic()
+        }
+        songAdapter.provided(listMusic, musicResultModel, thisContext)
+        songAdapter.notifyDataSetChanged()
+    }
 
-                binding.sbProgress.max = mediaPlayer.duration
-                binding.ivMusicPlay.setImageBitmap(null)
-                binding.ivMusicPlay.setImageResource(android.R.color.transparent)
-                binding.ivMusicPlay.setBackgroundResource(R.drawable.ic_music_pause_2)
+    private fun playMusic() {
+        if (musicResultModel.isPlay){
+            stopMusic()
+        }
+        mediaPlayer = MediaPlayer()
+        try {
+            mediaPlayer.setDataSource(musicResultModel.previewUrl)
+            mediaPlayer.prepare()
+            mediaPlayer.start()
 
-                musicVuMeterView.visibility = VISIBLE
-                musicResultModel.isPlay = true
+            binding.sbProgress.max = mediaPlayer.duration
+            musicResultModel.isPlay = true
 
-                startMusicMeter()
-            } catch (ex: Exception) {
-                Timber.tag("MySongAdapter").e("Error: " + ex.message)
-            }
+            setupStartOrStop(true)
+            startMusicMeter()
+        } catch (ex: Exception) {
+            Timber.tag("MySongAdapter").e("Error: " + ex.message)
+        }
+    }
+
+    private fun stopMusic() {
+        musicResultModel.isPlay = false
+        mediaPlayer.stop()
+        setupStartOrStop(false)
+    }
+
+    private fun setupStartOrStop(isStart: Boolean) = with(binding) {
+        if (isStart) {
+            ivMusicPlay.setImageBitmap(null)
+            ivMusicPlay.setImageResource(android.R.color.transparent)
+            ivMusicPlay.setBackgroundResource(R.drawable.ic_music_pause_2)
+        } else {
+            ivMusicPlay.setImageBitmap(null)
+            ivMusicPlay.setImageResource(android.R.color.transparent)
+            ivMusicPlay.setBackgroundResource(R.drawable.ic_music_play)
         }
     }
 
@@ -223,28 +230,5 @@ class SearchActivity : AppCompatActivity(), SearchOnClickListener<MusicResultMod
                 }
             }
         }.start()
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    private fun stopMusic() {
-        runOnUiThread {
-            musicVuMeterView.visibility = GONE
-            songAdapter.notifyItemChanged(currPosition)
-        }
-        musicResultModel.isPlay = false
-        mediaPlayer.stop()
-        setupStartOrStop(false)
-    }
-
-    private fun setupStartOrStop(isStart: Boolean) = with(binding) {
-        if (isStart) {
-            ivMusicPlay.setImageBitmap(null)
-            ivMusicPlay.setImageResource(android.R.color.transparent)
-            ivMusicPlay.setBackgroundResource(R.drawable.ic_music_pause_2)
-        } else {
-            ivMusicPlay.setImageBitmap(null)
-            ivMusicPlay.setImageResource(android.R.color.transparent)
-            ivMusicPlay.setBackgroundResource(R.drawable.ic_music_play)
-        }
     }
 }

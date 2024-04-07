@@ -5,29 +5,27 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.musicplayer.activity.music.model.MusicResultModel
 import com.example.musicplayer.activity.music.presentation.SearchActivity
 import com.example.musicplayer.activity.music.presentation.SearchOnClickListener
 import com.example.musicplayer.databinding.ActivitySearchListItemBinding
-import com.example.musicplayer.helper.InterfaceDialog
-import com.bumptech.glide.Glide
 
 class SongAdapter : RecyclerView.Adapter<SongAdapter.AddressHolder>() {
 
     private var listModel = mutableListOf<MusicResultModel>()
-    private lateinit var listener : SearchOnClickListener<MusicResultModel>
-    private lateinit var MusicResultModel : MusicResultModel
+    private lateinit var listener: SearchOnClickListener<MusicResultModel>
+    private lateinit var resultModel: MusicResultModel
 
     @SuppressLint("NotifyDataSetChanged")
     fun provided(
         model: List<MusicResultModel>,
-        MusicResultModel: MusicResultModel,
+        resultModel: MusicResultModel,
         context: SearchActivity,
-        interfaceDialog: InterfaceDialog,
     ) {
         this.listModel = model.toMutableList()
         this.listener = context
-        this.MusicResultModel = MusicResultModel
+        this.resultModel = resultModel
         notifyDataSetChanged()
     }
 
@@ -60,18 +58,16 @@ class SongAdapter : RecyclerView.Adapter<SongAdapter.AddressHolder>() {
             binding.tvArtist.text = model.artistName
             binding.tvAlbum.text = model.collectionName
 
-            if (MusicResultModel.previewUrl != null){
-                if (!MusicResultModel.previewUrl.equals(model.previewUrl)){
+            if (resultModel.previewUrl != null) {
+                if (!resultModel.previewUrl.equals(model.previewUrl)) {
                     binding.vmMusic.visibility = View.INVISIBLE
-                }else{
+                } else {
                     binding.vmMusic.visibility = View.VISIBLE
                 }
             }
 
-            // set on click listener
             binding.layoutContent.setOnClickListener {
                 listener.onItemClick(
-                    binding,
                     position,
                     model
                 )

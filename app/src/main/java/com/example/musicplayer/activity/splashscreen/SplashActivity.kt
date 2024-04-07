@@ -2,11 +2,13 @@ package com.example.musicplayer.activity.splashscreen
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
 import com.example.musicplayer.R
 import com.example.musicplayer.activity.music.presentation.SearchActivity
+import com.microsoft.appcenter.AppCenter
+import com.microsoft.appcenter.analytics.Analytics
+import com.microsoft.appcenter.crashes.Crashes
 import timber.log.Timber
 
 @SuppressLint("CustomSplashScreen")
@@ -16,6 +18,7 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
         supportActionBar!!.hide()
+        setupAppCenter()
         setupScreen()
     }
 
@@ -38,5 +41,13 @@ class SplashActivity : AppCompatActivity() {
         }
         // start thread
         background.start()
+    }
+
+    private fun setupAppCenter() {
+        AppCenter.configure(application, "21c7c5c8-3df3-4473-9f9a-352b24fa896b")
+        if (AppCenter.isConfigured()) {
+            AppCenter.start(Analytics::class.java)
+            AppCenter.start(Crashes::class.java)
+        }
     }
 }
